@@ -1,5 +1,6 @@
 plugins {
-    alias(libs.plugins.android.application)
+    id("com.android.application")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -32,15 +33,14 @@ android {
 }
 
 dependencies {
+    // Firebase
+        implementation ("com.google.firebase:firebase-auth:22.3.1")
+        implementation ("com.google.android.gms:play-services-auth:20.7.0") // Versión estable
+        implementation ("androidx.appcompat:appcompat:1.6.1")
+        implementation ("com.google.android.material:material:1.11.0")
+        implementation("com.squareup.retrofit2:retrofit:2.9.0")
+        implementation("com.squareup.retrofit2:converter-gson:2.9.0")
 
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-    implementation("com.google.code.gson:gson:2.8.9")
-    implementation(libs.appcompat)
-    implementation(libs.material)
-    implementation(libs.activity)
-    implementation(libs.constraintlayout)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.ext.junit)
-    androidTestImplementation(libs.espresso.core)
+    implementation(libs.credentials)
+    implementation(libs.googleid)
 }

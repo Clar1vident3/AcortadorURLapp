@@ -3,6 +3,7 @@ package com.example.acortadorurlapp;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
@@ -11,6 +12,10 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+
+//import retrofit2.Call;
+//import retrofit2.Callback;
+import com.google.firebase.auth.FirebaseAuth;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -26,8 +31,15 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
 
+        FirebaseAuth auth = FirebaseAuth.getInstance();
+        if (auth.getCurrentUser() == null) {
+            // Si no está logueado, redirige al Login
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
+            return;
+        }
+        setContentView(R.layout.activity_main);
         // Inicializar vistas
         etUrl = findViewById(R.id.et_url);
         tvResult = findViewById(R.id.tv_result);
