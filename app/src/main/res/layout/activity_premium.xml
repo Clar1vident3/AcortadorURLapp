@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="center_horizontal"
+    android:background="#F2F2F2"
+    tools:context=".PremiumActivity">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="¡Hazte Premium!"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:textColor="#333"
+        android:layout_marginBottom="16dp"
+        android:layout_marginTop="32dp"/>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Desbloquea acortamiento de links ilimitado, estadísticas avanzadas y soporte prioritario."
+        android:textSize="16sp"
+        android:textColor="#555"
+        android:layout_marginBottom="32dp"
+        android:gravity="center"/>
+
+    <EditText
+        android:id="@+id/etCardNumber"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Número de Tarjeta (solo para demostración)"
+        android:inputType="number"
+        android:maxLength="16"
+        android:layout_marginBottom="16dp"
+        android:backgroundTint="#6200EE"
+        android:textColor="#000"
+        android:textSize="16sp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="16dp">
+
+        <EditText
+            android:id="@+id/etExpiryDate"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="MM/AA"
+            android:inputType="number"
+            android:maxLength="5"
+            android:layout_marginEnd="8dp"
+            android:backgroundTint="#6200EE"
+            android:textColor="#000"
+            android:textSize="16sp"/>
+
+        <EditText
+            android:id="@+id/etCvv"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="CVV"
+            android:inputType="numberPassword"
+            android:maxLength="3"
+            android:layout_marginStart="8dp"
+            android:backgroundTint="#6200EE"
+            android:textColor="#000"
+            android:textSize="16sp"/>
+    </LinearLayout>
+
+    <EditText
+        android:id="@+id/etCardHolderName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Nombre del Titular de la Tarjeta"
+        android:inputType="textPersonName"
+        android:layout_marginBottom="32dp"
+        android:backgroundTint="#6200EE"
+        android:textColor="#000"
+        android:textSize="16sp"/>
+
+    <Button
+        android:id="@+id/btnSubscribe"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Suscribirse"
+        android:backgroundTint="#4CAF50"
+        android:textColor="#FFFFFF"
+        android:textAllCaps="false"
+        android:paddingHorizontal="40dp"
+        android:paddingVertical="12dp"
+        android:textSize="18sp"/>
+
+</LinearLayout>
