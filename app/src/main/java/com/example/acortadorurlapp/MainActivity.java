@@ -1,379 +1,239 @@
-// Archivo: app/src/main/java/com/example/acortadorurlapp/MainActivity.java
 package com.example.acortadorurlapp;
 
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
-import android.util.Log; // Importar para depuración (logs)
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.Task;
+import com.example.acortadorurlapp.models.User; // Asegúrate de que esta importación exista
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.example.acortadorurlapp.models.User; // Importa tu clase User
 
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+import com.example.acortadorurlapp.ShortenRequest;
+import com.example.acortadorurlapp.ShortenResponse;
+import com.example.acortadorurlapp.RetrofitClient;
+
 public class MainActivity extends AppCompatActivity {
 
-    private static final String TAG = "MainActivity"; // Etiqueta para mensajes de log
+    private static final String TAG = "MainActivity";
 
-    // Vistas de la UI
     private EditText etUrl;
     private TextView tvResult;
-    private Button btnShorten, btnCopy;
-    private Button btnSignOut, btnGoPremium; // Botones de Firebase
-    private TextView tvAttemptsCounter; // TextView para el contador
+    private Button btnShorten, btnCopy; // Eliminar btnMakePremium de aquí
+    private TextView tvAttemptsCounter; // Tu TextView de intentos
+    private Button btnGoPremium; // Tu botón "Hazte Premium"
+    private Button btnSignOut; // Tu botón "Cerrar Sesión"
 
-    private String currentShortUrl = ""; // Para almacenar la URL acortada actual
+    private FirebaseAuth mAuth;
+    private FirebaseFirestore db;
+    private GoogleSignInClient mGoogleSignInClient;
 
-    // Instancias de Firebase
-    private FirebaseAuth mAuth; // Para autenticación
-    private FirebaseFirestore db; // Para la base de datos Firestore
-
-    // Variables de estado del usuario
-    private int freeAttempts = 5; // Intentos gratuitos por defecto para nuevos usuarios
-    private boolean isPremiumUser = false; // Indica si el usuario es premium
+    private User currentUserModel; // Para almacenar el modelo de usuario de Firestore
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
 
-        // Inicializar instancias de Firebase
+        // Inicializar Firebase Auth y Firestore
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
-        // --- Verificación de autenticación al inicio de la actividad ---
-        // Se ejecuta antes de cargar cualquier vista para asegurar que haya un usuario logueado.
-        FirebaseUser currentUser = mAuth.getCurrentUser();
-        if (currentUser == null) {
-            // Si no hay un usuario logueado, redirige a la LoginActivity
-            startActivity(new Intent(this, LoginActivity.class));
-            finish(); // Finaliza esta actividad para que no se pueda volver atrás con el botón físico
-            return; // Detiene la ejecución de onCreate si no hay usuario
-        }
+        // Configurar Google Sign-Out
+        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(getString(R.string.default_web_client_id))
+                .requestEmail()
+                .build();
+        mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
 
-        // Si el usuario está logueado, carga el layout
-        setContentView(R.layout.activity_main);
-
-        // --- Inicialización de Vistas de la UI ---
+        // Inicialización de Vistas de la UI
         etUrl = findViewById(R.id.et_url);
         tvResult = findViewById(R.id.tv_result);
         btnShorten = findViewById(R.id.btn_shorten);
-        btnCopy = findViewById(R.id.btn_copy); // Asegúrate que este ID sea correcto en tu XML
-        // Si es btn_copy, entonces btnCopy = findViewById(R.id.btn_copy);
+        btnCopy = findViewById(R.id.btn_copy);
+        tvAttemptsCounter = findViewById(R.id.tvAttemptsCounter); // ID de tu XML
+        btnGoPremium = findViewById(R.id.btnGoPremium); // ID de tu XML
+        btnSignOut = findViewById(R.id.btnSignOut); // ID de tu XML
 
-        // Nuevos elementos de UI para el estado del usuario
-        btnSignOut = findViewById(R.id.btnSignOut);
-        btnGoPremium = findViewById(R.id.btnGoPremium);
-        tvAttemptsCounter = findViewById(R.id.tvAttemptsCounter);
+        // Listeners
+        btnShorten.setOnClickListener(v -> shortenUrl());
+        btnCopy.setOnClickListener(v -> copyUrlToClipboard());
 
-        // --- Configuración de Listeners para los botones ---
-
-        // Listener para el botón "Acortar URL"
-        btnShorten.setOnClickListener(v -> {
-            String url = etUrl.getText().toString().trim();
-            if (!url.isEmpty()) {
-                shortenUrl(url); // Llama al método que maneja la lógica de acortamiento
-            } else {
-                Toast.makeText(this, "Por favor, ingresa una URL válida", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        // Listener para el botón "Copiar URL" (inicialmente oculto)
-        btnCopy.setVisibility(View.GONE); // Asegura que esté oculto al inicio
-        btnCopy.setOnClickListener(v -> copyToClipboard());
-
-        // Listener para el botón "Cerrar Sesión"
-        btnSignOut.setOnClickListener(v -> signOut());
-
-        // Listener para el botón "Hazte Premium"
         btnGoPremium.setOnClickListener(v -> {
-            // Inicia la PremiumActivity
             Intent intent = new Intent(MainActivity.this, PremiumActivity.class);
             startActivity(intent);
         });
 
-        // --- Cargar los datos del usuario desde Firestore ---
-        // Este es un paso crucial para obtener el estado premium y los intentos restantes
-        loadUserData(currentUser.getUid());
+        btnSignOut.setOnClickListener(v -> signOut());
     }
 
-    /**
-     * Carga los datos del usuario actual (premium status, free attempts) desde Firestore.
-     * Si el usuario no existe en Firestore, crea un nuevo documento para él.
-     * @param userId El UID del usuario autenticado por Firebase Auth.
-     */
-    private void loadUserData(String userId) {
-        DocumentReference userRef = db.collection("users").document(userId);
+    @Override
+    protected void onStart() {
+        super.onStart();
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser == null) {
+            navigateToLogin();
+        } else {
+            loadUserData(currentUser.getUid());
+        }
+    }
 
-        userRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
-            @Override
-            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
-                if (task.isSuccessful()) {
-                    DocumentSnapshot document = task.getResult();
-                    if (document.exists()) {
-                        // El documento del usuario existe en Firestore, lo mapeamos a nuestro objeto User
-                        User user = document.toObject(User.class);
-                        if (user != null) {
-                            isPremiumUser = user.isPremium();
-                            freeAttempts = user.getFreeAttemptsRemaining();
-                            updateUI(); // Actualiza la UI con los datos cargados
-                            Log.d(TAG, "Datos de usuario cargados: Email=" + user.getEmail() +
-                                    ", Premium=" + user.isPremium() + ", Intentos=" + user.getFreeAttemptsRemaining());
-                        }
-                    } else {
-                        // El documento del usuario NO existe, es la primera vez que se loguea.
-                        // Creamos un nuevo documento en Firestore para él.
-                        Log.d(TAG, "No se encontró el documento de usuario, creando uno nuevo.");
-                        createNewUserInFirestore(userId);
-                    }
+    private void loadUserData(String uid) {
+        DocumentReference userRef = db.collection("users").document(uid);
+        userRef.get().addOnSuccessListener(documentSnapshot -> {
+            if (documentSnapshot.exists()) {
+                currentUserModel = documentSnapshot.toObject(User.class);
+                if (currentUserModel != null) {
+                    updateUserUI(); // Llamar a la función de actualización de UI
                 } else {
-                    // Manejo de errores al intentar obtener el documento
-                    Log.e(TAG, "Error al obtener documento de usuario: ", task.getException());
-                    Toast.makeText(MainActivity.this, "Error al cargar datos del usuario. Inténtalo de nuevo.", Toast.LENGTH_LONG).show();
-                    // Opcional: Podrías forzar el cierre de sesión o inhabilitar funciones si hay un error grave.
+                    Log.e(TAG, "Error: User object is null after converting document. UID: " + uid);
+                    Toast.makeText(this, "Error al cargar datos del usuario. Por favor, reinicia la app.", Toast.LENGTH_LONG).show();
+                    navigateToLogin(); // Por seguridad, redirigir al login
                 }
+            } else {
+                Log.w(TAG, "Documento de usuario no encontrado en Firestore para UID: " + uid + ". Redirigiendo a Login.");
+                navigateToLogin(); // Si no existe el documento, algo salió mal o es un usuario viejo.
             }
+        }).addOnFailureListener(e -> {
+            Log.e(TAG, "Error al cargar datos del usuario desde Firestore: ", e);
+            Toast.makeText(this, "Error al cargar datos del usuario: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            navigateToLogin();
         });
     }
 
-    /**
-     * Crea un nuevo documento para un usuario en Firestore con valores por defecto.
-     * (No premium, 5 intentos gratuitos).
-     * @param userId El UID del usuario.
-     */
-    private void createNewUserInFirestore(String userId) {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
-        if (currentUser != null) {
-            // Crea un nuevo objeto User con los datos básicos y el estado por defecto
-            User newUser = new User(currentUser.getEmail(), currentUser.getDisplayName(), false, 5);
-            db.collection("users").document(userId).set(newUser)
-                    .addOnSuccessListener(new OnSuccessListener<Void>() {
-                        @Override
-                        public void onSuccess(Void aVoid) {
-                            Log.d(TAG, "Nuevo usuario creado en Firestore con ID: " + userId);
-                            // Actualiza las variables de estado locales con los valores por defecto
-                            isPremiumUser = newUser.isPremium();
-                            freeAttempts = newUser.getFreeAttemptsRemaining();
-                            updateUI(); // Refresca la UI
-                        }
-                    })
-                    .addOnFailureListener(new OnFailureListener() {
-                        @Override
-                        public void onFailure(@NonNull Exception e) {
-                            Log.e(TAG, "Error al crear nuevo usuario en Firestore: ", e);
-                            Toast.makeText(MainActivity.this, "Error al guardar los datos iniciales del usuario.", Toast.LENGTH_SHORT).show();
-                        }
-                    });
-        }
-    }
-
-    /**
-     * Actualiza la interfaz de usuario (contador de intentos, visibilidad del botón premium)
-     * basándose en el estado actual de 'isPremiumUser' y 'freeAttempts'.
-     */
-    private void updateUI() {
-        if (isPremiumUser) {
-            tvAttemptsCounter.setText("¡Usuario Premium!");
-            btnGoPremium.setVisibility(View.GONE); // Oculta el botón premium si ya es premium
-            btnShorten.setEnabled(true); // El botón de acortar siempre está habilitado para premium
-        } else {
-            tvAttemptsCounter.setText("Intentos Gratis: " + freeAttempts);
-            btnGoPremium.setVisibility(View.VISIBLE); // Muestra el botón premium
-            // Habilita/deshabilita el botón de acortar según los intentos restantes
-            btnShorten.setEnabled(freeAttempts > 0);
-            if (freeAttempts <= 0) {
-                // Si no hay intentos, muestra un mensaje y deshabilita el EditText de la URL también (opcional)
-                Toast.makeText(this, "Has agotado tus intentos gratuitos. ¡Hazte Premium!", Toast.LENGTH_LONG).show();
-                etUrl.setEnabled(false); // Opcional: deshabilita la entrada de URL
-            } else {
-                etUrl.setEnabled(true); // Asegúrate de que esté habilitada si hay intentos
-            }
-        }
-    }
-
-    /**
-     * Cierra la sesión del usuario actual de Firebase y redirige a la LoginActivity.
-     */
-    private void signOut() {
-        mAuth.signOut(); // Cierra la sesión de Firebase Authentication
-
-        // Crea un Intent para la LoginActivity
-        Intent intent = new Intent(MainActivity.this, LoginActivity.class);
-        // Estas banderas son cruciales para limpiar la pila de actividades:
-        // FLAG_ACTIVITY_NEW_TASK: Inicia la actividad en una nueva tarea.
-        // FLAG_ACTIVITY_CLEAR_TASK: Borra todas las actividades anteriores en la tarea.
-        // Esto previene que el usuario regrese a MainActivity usando el botón de retroceso.
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-        finish(); // Finaliza MainActivity
-    }
-
-    /**
-     * Lógica para acortar la URL.
-     * Verifica si el usuario es premium o si tiene intentos gratuitos restantes.
-     * @param originalUrl La URL que el usuario desea acortar.
-     */
-    private void shortenUrl(String originalUrl) {
-        FirebaseUser currentUser = mAuth.getCurrentUser();
-        if (currentUser == null) {
-            Toast.makeText(this, "Por favor, inicia sesión para usar el acortador.", Toast.LENGTH_SHORT).show();
-            // Esto es una medida de seguridad, ya que la verificación inicial de login debería haberlo prevenido.
-            startActivity(new Intent(this, LoginActivity.class));
-            finish();
+    // --- Tu función updateUI actualizada ---
+    private void updateUserUI() {
+        if (currentUserModel == null) {
+            // Esto no debería pasar si loadUserData funciona correctamente, pero es una buena verificación.
+            Log.w(TAG, "updateUserUI llamado con currentUserModel nulo.");
             return;
         }
 
-        // Mostrar un estado de carga en el botón
-        btnShorten.setEnabled(false);
-        btnShorten.setText("Acortando...");
-
-        if (isPremiumUser) {
-            // Si es usuario premium, llama directamente a la API sin restricciones de contador
-            performShortenApiCall(originalUrl, currentUser.getUid());
+        if (currentUserModel.isPremium()) {
+            tvAttemptsCounter.setText("¡Usuario Premium!");
+            btnGoPremium.setVisibility(View.GONE); // Oculta el botón premium si ya es premium
+            btnShorten.setEnabled(true); // El botón de acortar siempre está habilitado para premium
+            etUrl.setEnabled(true); // Asegúrate de que el EditText esté habilitado para premium
         } else {
-            // Si no es premium, verifica si tiene intentos gratuitos restantes
-            if (freeAttempts > 0) {
-                performShortenApiCall(originalUrl, currentUser.getUid());
-            } else {
-                // Si no tiene intentos, restaura el botón y muestra un mensaje
-                btnShorten.setEnabled(true);
-                btnShorten.setText("Acortar URL");
+            tvAttemptsCounter.setText("Intentos Gratis: " + currentUserModel.getFreeAttemptsRemaining());
+            btnGoPremium.setVisibility(View.VISIBLE); // Muestra el botón premium
+
+            // Habilita/deshabilita el botón de acortar y el EditText según los intentos restantes
+            boolean hasAttempts = currentUserModel.getFreeAttemptsRemaining() > 0;
+            btnShorten.setEnabled(hasAttempts);
+            etUrl.setEnabled(hasAttempts);
+
+            if (!hasAttempts) {
                 Toast.makeText(this, "Has agotado tus intentos gratuitos. ¡Hazte Premium!", Toast.LENGTH_LONG).show();
-                etUrl.setEnabled(false); // Opcional: deshabilita la entrada de URL
             }
         }
     }
 
-    /**
-     * Realiza la llamada a la API de acortamiento de URLs.
-     * @param originalUrl La URL a acortar.
-     * @param userId El UID del usuario (necesario para actualizar Firestore si no es premium).
-     */
-    private void performShortenApiCall(String originalUrl, String userId) {
-        ApiService apiService = RetrofitClient.getApiService();
-        Call<ShortenResponse> call = apiService.shortenUrl(new ShortenRequest(originalUrl));
+    private void shortenUrl() {
+        String originalUrl = etUrl.getText().toString().trim();
+        if (originalUrl.isEmpty()) {
+            Toast.makeText(this, "Por favor, ingresa una URL.", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-        call.enqueue(new Callback<ShortenResponse>() {
+        // Ya validamos los intentos en updateUserUI y deshabilitamos el botón,
+        // pero esta es una doble verificación.
+        if (currentUserModel == null || (!currentUserModel.isPremium() && currentUserModel.getFreeAttemptsRemaining() <= 0)) {
+            Toast.makeText(this, "No tienes intentos restantes o tu estado no es válido. Hazte Premium.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        ShortenRequest request = new ShortenRequest(originalUrl);
+        RetrofitClient.getApiService().shortenUrl(request).enqueue(new Callback<ShortenResponse>() {
             @Override
             public void onResponse(Call<ShortenResponse> call, Response<ShortenResponse> response) {
-                // Restaura el estado del botón después de la respuesta de la API
-                btnShorten.setEnabled(true);
-                btnShorten.setText("Acortar URL");
-
                 if (response.isSuccessful() && response.body() != null) {
-                    currentShortUrl = response.body().getShortUrl();
-                    tvResult.setText("URL corta:\n" + currentShortUrl);
-                    btnCopy.setVisibility(View.VISIBLE); // Muestra el botón de copiar
+                    String shortUrl = response.body().getShortUrl();
+                    tvResult.setText("URL Acortada: " + shortUrl);
+                    tvResult.setVisibility(View.VISIBLE);
+                    btnCopy.setVisibility(View.VISIBLE);
 
-                    // Si el usuario NO es premium, disminuye el contador en Firestore
-                    if (!isPremiumUser) {
-                        updateFreeAttemptsInFirestore(userId);
+                    // Decrementar intentos si no es premium
+                    if (!currentUserModel.isPremium()) {
+                        decrementAttempts();
                     }
-
                 } else {
-                    // Manejo de errores de la API (ej. URL inválida, error del servidor)
-                    String errorMessage = "Error al acortar URL.";
-                    if (response.errorBody() != null) {
-                        try {
-                            // Intenta leer el mensaje de error del cuerpo de la respuesta
-                            errorMessage += " " + response.errorBody().string();
-                        } catch (Exception e) {
-                            Log.e(TAG, "Error leyendo errorBody: ", e);
-                        }
-                    } else if (response.message() != null && !response.message().isEmpty()) {
-                        errorMessage += " " + response.message();
-                    }
-                    tvResult.setText(errorMessage);
-                    Toast.makeText(MainActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
+                    String errorMsg = "Error al acortar URL. Código: " + response.code();
+                    // ... (resto de tu manejo de errores) ...
+                    Toast.makeText(MainActivity.this, errorMsg, Toast.LENGTH_LONG).show();
+                    Log.e(TAG, "Response failed: " + response.errorBody());
                 }
             }
 
             @Override
             public void onFailure(Call<ShortenResponse> call, Throwable t) {
-                // Manejo de errores de conexión (ej. sin internet, servidor no disponible)
-                btnShorten.setEnabled(true);
-                btnShorten.setText("Acortar URL");
-                String errorMessage = "Error de conexión: " + t.getMessage();
-                tvResult.setText(errorMessage);
-                Toast.makeText(MainActivity.this, errorMessage, Toast.LENGTH_SHORT).show();
-                Log.e(TAG, "Fallo en la llamada a la API: ", t);
+                Toast.makeText(MainActivity.this, "Error de red: " + t.getMessage(), Toast.LENGTH_LONG).show();
+                Log.e(TAG, "Network error: ", t);
             }
         });
     }
 
-    /**
-     * Disminuye el contador de intentos gratuitos del usuario en Firestore.
-     * Solo se llama si el usuario no es premium y aún tiene intentos.
-     * @param userId El UID del usuario.
-     */
-    private void updateFreeAttemptsInFirestore(String userId) {
-        // Solo actualiza si hay intentos restantes y el usuario no es premium
-        if (freeAttempts > 0 && !isPremiumUser) {
-            db.collection("users").document(userId)
-                    // Usa FieldValue.increment() para asegurar que la actualización sea atómica y segura
-                    // para múltiples escrituras si ocurrieran (aunque improbable en este caso).
-                    .update("freeAttemptsRemaining", freeAttempts - 1)
-                    .addOnSuccessListener(new OnSuccessListener<Void>() {
-                        @Override
-                        public void onSuccess(Void aVoid) {
-                            Log.d(TAG, "Contador de intentos actualizado en Firestore.");
-                            freeAttempts--; // Actualiza la variable local después de la escritura exitosa
-                            updateUI(); // Refresca la UI para mostrar el nuevo contador
-                        }
+    private void decrementAttempts() {
+        if (currentUserModel != null && !currentUserModel.isPremium()) {
+            int newAttempts = currentUserModel.getFreeAttemptsRemaining() - 1;
+            currentUserModel.setFreeAttemptsRemaining(newAttempts); // Actualiza el modelo local
+
+            // Actualizar en Firestore
+            DocumentReference userRef = db.collection("users").document(mAuth.getCurrentUser().getUid());
+            userRef.update("freeAttemptsRemaining", newAttempts)
+                    .addOnSuccessListener(aVoid -> {
+                        Log.d(TAG, "Intentos restantes actualizados en Firestore.");
+                        updateUserUI(); // Vuelve a llamar a updateUI para reflejar los cambios en la interfaz
                     })
-                    .addOnFailureListener(new OnFailureListener() {
-                        @Override
-                        public void onFailure(@NonNull Exception e) {
-                            Log.e(TAG, "Error al actualizar contador de intentos en Firestore: ", e);
-                            Toast.makeText(MainActivity.this, "Error al guardar el conteo de intentos.", Toast.LENGTH_SHORT).show();
-                        }
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Error al actualizar intentos en Firestore.", e);
+                        Toast.makeText(MainActivity.this, "Error al guardar intentos.", Toast.LENGTH_SHORT).show();
                     });
         }
     }
 
-    /**
-     * Copia la URL acortada actual al portapapeles.
-     */
-    private void copyToClipboard() {
-        if (!currentShortUrl.isEmpty()) {
-            ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-            ClipData clip = ClipData.newPlainText("URL corta", currentShortUrl);
-            if (clipboard != null) {
-                clipboard.setPrimaryClip(clip);
-                Toast.makeText(this, "URL copiada al portapapeles", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, "No se pudo acceder al portapapeles.", Toast.LENGTH_SHORT).show();
-            }
+    private void copyUrlToClipboard() {
+        String urlToCopy = tvResult.getText().toString().replace("URL Acortada: ", "");
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        ClipData clip = ClipData.newPlainText("URL Acortada", urlToCopy);
+        if (clipboard != null) {
+            clipboard.setPrimaryClip(clip);
+            Toast.makeText(this, "URL copiada al portapapeles", Toast.LENGTH_SHORT).show();
         }
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        // Cuando MainActivity vuelve al frente (por ejemplo, después de cerrar PremiumActivity),
-        // recargamos los datos del usuario para asegurarnos de que el estado premium esté actualizado.
-        FirebaseUser currentUser = mAuth.getCurrentUser();
-        if (currentUser != null) {
-            loadUserData(currentUser.getUid());
-        }
+    private void signOut() {
+        mAuth.signOut();
+        mGoogleSignInClient.signOut().addOnCompleteListener(this, task -> {
+            Log.d(TAG, "Google Sign-Out complete.");
+            navigateToLogin();
+        });
+    }
+
+    private void navigateToLogin() {
+        Intent intent = new Intent(MainActivity.this, LoginActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
     }
 }
