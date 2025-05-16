@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#F2F2F2">
@@ -11,11 +13,46 @@
         android:padding="24dp"
         android:gravity="center_horizontal">
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="end"
+            android:layout_marginBottom="16dp"
+            android:layout_marginTop="16dp">
+
+            <Button
+                android:id="@+id/btnGoPremium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Hazte Premium"
+                android:backgroundTint="#FF9800"
+                android:textColor="#FFFFFF"
+                android:textAllCaps="false"
+                android:textSize="12sp"
+                android:minHeight="0dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:layout_marginEnd="8dp"/>
+
+            <TextView
+                android:id="@+id/tvAttemptsCounter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Intentos Gratis: 5"
+                android:textSize="16sp"
+                android:textColor="#333"
+                android:layout_gravity="center_vertical"
+                android:paddingEnd="8dp"/>
+        </LinearLayout>
+
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:elevation="6dp"
-            android:layout_marginTop="32dp"
+            app:cardCornerRadius="8dp"
             android:layout_marginBottom="32dp"
             android:layout_marginHorizontal="8dp">
 
@@ -69,5 +106,17 @@
 
             </LinearLayout>
         </androidx.cardview.widget.CardView>
+
+        <Button
+            android:id="@+id/btnSignOut"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Cerrar Sesión"
+            android:backgroundTint="#D32F2F"
+            android:textColor="#FFFFFF"
+            android:textAllCaps="false"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="20dp" />
+
     </LinearLayout>
 </ScrollView>

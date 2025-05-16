@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "116448646260",
+    "project_id": "acotador-e409e",
+    "storage_bucket": "acotador-e409e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:116448646260:android:82fd2f76a45fde53aeed21",
+        "android_client_info": {
+          "package_name": "com.example.acortadorurlapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "116448646260-88eviq0roanv31atlslf8nmpk6uqt06k.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.acortadorurlapp",
+            "certificate_hash": "dad7ac8ef6c55eb0046750ccfb9d13b0e6e3a35e"
+          }
+        },
+        {
+          "client_id": "116448646260-dpu7citvs1j6de86i32iih070fq46g7f.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAE54L60BWFNWM7raVpKtBTCAPjUOSRj94"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "116448646260-dpu7citvs1j6de86i32iih070fq46g7f.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
