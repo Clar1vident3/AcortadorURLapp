@@ -13,7 +13,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.Nullable;
+import androidx.annotation.Nullable; // Aunque no se usa en este fragmento, se mantiene por si acaso
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.acortadorurlapp.models.User; // Asegúrate de que esta importación exista
@@ -29,26 +29,36 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+// Importaciones corregidas y ajustadas (asumiendo que ShortenRequest, ShortenResponse y RetrofitClient
+// están en el paquete principal de la app o en un subpaquete 'network' o 'api').
+// Si están en 'network', sería:
+// import com.example.acortadorurlapp.network.ShortenRequest;
+// import com.example.acortadorurlapp.network.ShortenResponse;
+// import com.example.acortadorurlapp.network.RetrofitClient;
+// Si están en el paquete principal:
 import com.example.acortadorurlapp.ShortenRequest;
 import com.example.acortadorurlapp.ShortenResponse;
 import com.example.acortadorurlapp.RetrofitClient;
+
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
 
+    // --- Declaraciones de variables - ¡SOLO UNA VEZ! ---
     private EditText etUrl;
     private TextView tvResult;
-    private Button btnShorten, btnCopy; // Eliminar btnMakePremium de aquí
-    private TextView tvAttemptsCounter; // Tu TextView de intentos
-    private Button btnGoPremium; // Tu botón "Hazte Premium"
-    private Button btnSignOut; // Tu botón "Cerrar Sesión"
+    private Button btnShorten, btnCopy;
+    private TextView tvAttemptsCounter;
+    private Button btnGoPremium;
+    private Button btnSignOut;
 
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
     private GoogleSignInClient mGoogleSignInClient;
 
     private User currentUserModel; // Para almacenar el modelo de usuario de Firestore
+    // --- Fin de las declaraciones ---
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
                 .build();
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
 
-        // Inicialización de Vistas de la UI
+        // Inicialización de Vistas de la UI - ¡Aquí SÍ van los findViewById!
         etUrl = findViewById(R.id.et_url);
         tvResult = findViewById(R.id.tv_result);
         btnShorten = findViewById(R.id.btn_shorten);
@@ -121,24 +131,21 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    // --- Tu función updateUI actualizada ---
     private void updateUserUI() {
         if (currentUserModel == null) {
-            // Esto no debería pasar si loadUserData funciona correctamente, pero es una buena verificación.
             Log.w(TAG, "updateUserUI llamado con currentUserModel nulo.");
             return;
         }
 
         if (currentUserModel.isPremium()) {
             tvAttemptsCounter.setText("¡Usuario Premium!");
-            btnGoPremium.setVisibility(View.GONE); // Oculta el botón premium si ya es premium
-            btnShorten.setEnabled(true); // El botón de acortar siempre está habilitado para premium
-            etUrl.setEnabled(true); // Asegúrate de que el EditText esté habilitado para premium
+            btnGoPremium.setVisibility(View.GONE);
+            btnShorten.setEnabled(true);
+            etUrl.setEnabled(true);
         } else {
             tvAttemptsCounter.setText("Intentos Gratis: " + currentUserModel.getFreeAttemptsRemaining());
-            btnGoPremium.setVisibility(View.VISIBLE); // Muestra el botón premium
+            btnGoPremium.setVisibility(View.VISIBLE);
 
-            // Habilita/deshabilita el botón de acortar y el EditText según los intentos restantes
             boolean hasAttempts = currentUserModel.getFreeAttemptsRemaining() > 0;
             btnShorten.setEnabled(hasAttempts);
             etUrl.setEnabled(hasAttempts);
@@ -156,8 +163,6 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        // Ya validamos los intentos en updateUserUI y deshabilitamos el botón,
-        // pero esta es una doble verificación.
         if (currentUserModel == null || (!currentUserModel.isPremium() && currentUserModel.getFreeAttemptsRemaining() <= 0)) {
             Toast.makeText(this, "No tienes intentos restantes o tu estado no es válido. Hazte Premium.", Toast.LENGTH_LONG).show();
             return;
@@ -173,13 +178,19 @@ public class MainActivity extends AppCompatActivity {
                     tvResult.setVisibility(View.VISIBLE);
                     btnCopy.setVisibility(View.VISIBLE);
 
-                    // Decrementar intentos si no es premium
                     if (!currentUserModel.isPremium()) {
                         decrementAttempts();
                     }
                 } else {
                     String errorMsg = "Error al acortar URL. Código: " + response.code();
-                    // ... (resto de tu manejo de errores) ...
+                    // Intentar leer el cuerpo del error si existe
+                    if (response.errorBody() != null) {
+                        try {
+                            errorMsg += ". Mensaje: " + response.errorBody().string();
+                        } catch (Exception e) {
+                            Log.e(TAG, "Error parsing error body", e);
+                        }
+                    }
                     Toast.makeText(MainActivity.this, errorMsg, Toast.LENGTH_LONG).show();
                     Log.e(TAG, "Response failed: " + response.errorBody());
                 }
@@ -196,14 +207,13 @@ public class MainActivity extends AppCompatActivity {
     private void decrementAttempts() {
         if (currentUserModel != null && !currentUserModel.isPremium()) {
             int newAttempts = currentUserModel.getFreeAttemptsRemaining() - 1;
-            currentUserModel.setFreeAttemptsRemaining(newAttempts); // Actualiza el modelo local
+            currentUserModel.setFreeAttemptsRemaining(newAttempts);
 
-            // Actualizar en Firestore
             DocumentReference userRef = db.collection("users").document(mAuth.getCurrentUser().getUid());
             userRef.update("freeAttemptsRemaining", newAttempts)
                     .addOnSuccessListener(aVoid -> {
                         Log.d(TAG, "Intentos restantes actualizados en Firestore.");
-                        updateUserUI(); // Vuelve a llamar a updateUI para reflejar los cambios en la interfaz
+                        updateUserUI();
                     })
                     .addOnFailureListener(e -> {
                         Log.e(TAG, "Error al actualizar intentos en Firestore.", e);
