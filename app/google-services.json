@@ -19,7 +19,15 @@
           "client_type": 1,
           "android_info": {
             "package_name": "com.example.acortadorurlapp",
-            "certificate_hash": "DAD7AC8EF6C55EB0046750CCFB9D13B0E6E3A35E"
+            "certificate_hash": "dad7ac8ef6c55eb0046750ccfb9d13b0e6e3a35e"
+          }
+        },
+        {
+          "client_id": "116448646260-tal93bta3d4d3pev4kobg94t29g01qb8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.acortadorurlapp",
+            "certificate_hash": "f83f551857db4f019375305a073f45c13030f88b"
           }
         },
         {
