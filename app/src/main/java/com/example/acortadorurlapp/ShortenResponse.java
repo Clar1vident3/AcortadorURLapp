@@ -8,16 +8,14 @@ import java.util.Date;
 import java.util.Locale;
 
 public class ShortenResponse {
-    @SerializedName("original")
+    @SerializedName("original_url")
     private String originalUrl;
-
-    @SerializedName("short")
+    @SerializedName("short_url")
     private String shortUrl;
     @SerializedName("short_code")
     private String shortCode;
     @SerializedName("created_at")
     private String createdAt;
-
     @SerializedName("clicks")
     private int clicks;
 

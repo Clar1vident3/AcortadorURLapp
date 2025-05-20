@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="8dp">
+    android:layout_margin="8dp"
+    app:cardElevation="4dp"
+    app:cardCornerRadius="8dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -10,35 +14,63 @@
         android:orientation="vertical"
         android:padding="16dp">
 
+        <!-- URL Original -->
         <TextView
             android:id="@+id/tvOriginalUrl"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="#000000"
-        android:textSize="16sp"/>
+            android:textColor="#212121"
+            android:textSize="14sp"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:textStyle="bold"/>
 
+        <!-- URL Corta -->
         <TextView
             android:id="@+id/tvShortUrl"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textColor="#6200EE"
-        android:textSize="14sp"/>
+            android:textSize="14sp"
+            android:layout_marginTop="4dp"
+            android:autoLink="web"/>
 
+        <!-- Contador de clicks -->
         <TextView
             android:id="@+id/tvClicks"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"/>
+            android:layout_marginTop="8dp"
+            android:textColor="#757575"
+            android:textSize="12sp"/>
 
-        <Button
-            android:id="@+id/btnDelete"
-            android:layout_width="wrap_content"
+        <!-- Botones en horizontal -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Eliminar"
-            android:layout_gravity="end"
+            android:orientation="horizontal"
             android:layout_marginTop="16dp"
-            android:backgroundTint="#FF0000"
-            android:textColor="#FFFFFF"/>
+            android:gravity="end">
+
+            <Button
+                android:id="@+id/btnCopy"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:text="Copiar"
+                android:textColor="#FFFFFF"
+                app:strokeColor="#6200EE"
+                app:strokeWidth="1dp"
+                android:layout_marginEnd="8dp"/>
+
+            <Button
+                android:id="@+id/btnDelete"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:text="Eliminar"
+                android:textColor="#FFFFFF"
+                app:backgroundTint="#FF3D00"/>
+
+        </LinearLayout>
 
     </LinearLayout>
 
