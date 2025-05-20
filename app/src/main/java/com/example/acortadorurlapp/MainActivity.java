@@ -265,23 +265,19 @@ public class MainActivity extends AppCompatActivity {
     }
     // Metodo para validar URLs
     private boolean isValidUrl(String url) {
-        // Patrón para validar URLs que comiencen con http:// o https://
-        String urlPattern = "^(https?://)?([\\da-z.-]+)\\.([a-z.]{2,6})([/\\w .-]*)*/?$";
+        // Patrón mejorado que acepta:
+        // - Protocolo http:// o https:// (opcional)
+        // - Dominios con caracteres alfanuméricos, puntos y guiones
+        // - TLD de 2 a 6 letras (o más para nuevos TLDs)
+        // - Rutas con caracteres especiales, Unicode, parámetros, fragmentos (#)
+        String urlPattern = "^(https?://)?" +                         // Protocolo (opcional)
+                "([\\w-]+\\.)+" +                          // Subdominios
+                "([a-z\\u00a1-\\uffff]{2,63})" +           // TLD (acepta caracteres Unicode)
+                "(/[-\\w\\u00a1-\\uffff@:%_+.~#?&/=]*)?$"; // Ruta, parámetros, fragmentos
 
-        // También aceptamos URLs sin http/https pero con dominio válido
-        String urlPatternWithOptionalProtocol = "^(https?://)?[\\w.-]+\\.[a-z]{2,}(/\\S*)?$";
-
-        // Validar con el patrón más estricto primero
         Pattern pattern = Pattern.compile(urlPattern, Pattern.CASE_INSENSITIVE);
         Matcher matcher = pattern.matcher(url);
 
-        // Si no coincide, probar con el patrón más flexible
-        if (!matcher.matches()) {
-            pattern = Pattern.compile(urlPatternWithOptionalProtocol, Pattern.CASE_INSENSITIVE);
-            matcher = pattern.matcher(url);
-            return matcher.matches();
-        }
-
-        return true;
+        return matcher.matches();
     }
 }
