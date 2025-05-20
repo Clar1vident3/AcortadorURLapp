@@ -40,6 +40,9 @@ import com.example.acortadorurlapp.ShortenRequest;
 import com.example.acortadorurlapp.ShortenResponse;
 import com.example.acortadorurlapp.RetrofitClient;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 
 public class MainActivity extends AppCompatActivity {
 
@@ -91,6 +94,12 @@ public class MainActivity extends AppCompatActivity {
 
         btnGoPremium.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, PremiumActivity.class);
+            startActivity(intent);
+        });
+
+        Button btnViewHistory = findViewById(R.id.btnViewHistory);
+        btnViewHistory.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, UrlListActivity.class);
             startActivity(intent);
         });
 
@@ -158,8 +167,16 @@ public class MainActivity extends AppCompatActivity {
 
     private void shortenUrl() {
         String originalUrl = etUrl.getText().toString().trim();
+
+        // Validación para campos vacios
         if (originalUrl.isEmpty()) {
             Toast.makeText(this, "Por favor, ingresa una URL.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Validación de formato de URL
+        if (!isValidUrl(originalUrl)) {
+            Toast.makeText(this, "URL no válida. Debe comenzar con http:// o https://", Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -245,5 +262,26 @@ public class MainActivity extends AppCompatActivity {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
+    }
+    // Metodo para validar URLs
+    private boolean isValidUrl(String url) {
+        // Patrón para validar URLs que comiencen con http:// o https://
+        String urlPattern = "^(https?://)?([\\da-z.-]+)\\.([a-z.]{2,6})([/\\w .-]*)*/?$";
+
+        // También aceptamos URLs sin http/https pero con dominio válido
+        String urlPatternWithOptionalProtocol = "^(https?://)?[\\w.-]+\\.[a-z]{2,}(/\\S*)?$";
+
+        // Validar con el patrón más estricto primero
+        Pattern pattern = Pattern.compile(urlPattern, Pattern.CASE_INSENSITIVE);
+        Matcher matcher = pattern.matcher(url);
+
+        // Si no coincide, probar con el patrón más flexible
+        if (!matcher.matches()) {
+            pattern = Pattern.compile(urlPatternWithOptionalProtocol, Pattern.CASE_INSENSITIVE);
+            matcher = pattern.matcher(url);
+            return matcher.matches();
+        }
+
+        return true;
     }
 }

@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "116448646260",
+    "firebase_url": "https://acotador-e409e-default-rtdb.firebaseio.com",
     "project_id": "acotador-e409e",
     "storage_bucket": "acotador-e409e.firebasestorage.app"
   },
@@ -19,6 +20,14 @@
           "android_info": {
             "package_name": "com.example.acortadorurlapp",
             "certificate_hash": "dad7ac8ef6c55eb0046750ccfb9d13b0e6e3a35e"
+          }
+        },
+        {
+          "client_id": "116448646260-tal93bta3d4d3pev4kobg94t29g01qb8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.acortadorurlapp",
+            "certificate_hash": "f83f551857db4f019375305a073f45c13030f88b"
           }
         },
         {
