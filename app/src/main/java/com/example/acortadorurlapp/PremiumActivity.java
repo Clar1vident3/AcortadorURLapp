@@ -16,6 +16,8 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
+import java.util.Calendar;
+
 public class PremiumActivity extends AppCompatActivity {
 
     private static final String TAG = "PremiumActivity";
@@ -47,9 +49,9 @@ public class PremiumActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 // Aquí NO procesamos pagos reales, solo simulamos la suscripción
-                String cardNumber = etCardNumber.getText().toString();
-                String expiryDate = etExpiryDate.getText().toString();
-                String cvv = etCvv.getText().toString();
+                String cardNumber = etCardNumber.getText().toString().trim();
+                String expiryDate = etExpiryDate.getText().toString().trim();
+                String cvv = etCvv.getText().toString().trim();
                 String cardHolderName = etCardHolderName.getText().toString();
 
                 // Validaciones básicas de campos
@@ -62,11 +64,31 @@ public class PremiumActivity extends AppCompatActivity {
                 } else if (cvv.length() != 3) {
                     Toast.makeText(PremiumActivity.this, "CVV inválido (3 dígitos)", Toast.LENGTH_SHORT).show();
                 }
-                else {
-                    Toast.makeText(PremiumActivity.this, "Procesando suscripción (simulada)...", Toast.LENGTH_SHORT).show();
-                    // Llama al método para actualizar el estado del usuario en Firestore
-                    updateUserToPremium();
+
+                if (!isValidCardNumber(cardNumber)) {
+                    etCardNumber.setError("Número de tarjeta inválido");
+                    return;
                 }
+
+                if (!isValidExpiryDate(expiryDate)) {
+                    etExpiryDate.setError("Fecha de vencimiento inválida (MM/AA) o tarjeta vencida");
+                    return;
+                }
+
+                if (!isValidCvv(cvv)) {
+                    etCvv.setError("CVV inválido (3 o 4 dígitos)");
+                    return;
+                }
+
+                if (!isValidCardHolderName(cardHolderName)) {
+                    etCardHolderName.setError("Nombre inválido (solo letras y espacios)");
+                    return;
+                }
+
+                // Si pasa todas las validaciones
+                Toast.makeText(PremiumActivity.this, "Procesando suscripción (simulada)...", Toast.LENGTH_SHORT).show();
+                updateUserToPremium();
+
             }
         });
     }
@@ -100,4 +122,64 @@ public class PremiumActivity extends AppCompatActivity {
             finish(); // Cierra la actividad si no hay usuario logueado.
         }
     }
+
+    // Método para validar el número de tarjeta usando el algoritmo de Luhn
+    private boolean isValidCardNumber(String cardNumber) {
+        String cleanedNumber = cardNumber.replaceAll("[^0-9]", "");
+
+        // Verificar longitud básica, 16 digitos
+        if (cleanedNumber.length() != 16) {
+            return false;
+        }
+
+        // Algoritmo de Luhn
+        int sum = 0;
+        boolean alternate = false;
+        for (int i = cleanedNumber.length() - 1; i >= 0; i--) {
+            int digit = Integer.parseInt(cleanedNumber.substring(i, i + 1));
+            if (alternate) {
+                digit *= 2;
+                if (digit > 9) {
+                    digit = (digit % 10) + 1;
+                }
+            }
+            sum += digit;
+            alternate = !alternate;
+        }
+        return (sum % 10 == 0);
+    }
+
+    // Método para validar fecha de expiración (MM/AA)
+    private boolean isValidExpiryDate(String expiryDate) {
+        if (!expiryDate.matches("^(0[1-9]|1[0-2])/?([0-9]{2})$")) {
+            return false;
+        }
+
+        String[] parts = expiryDate.split("/");
+        int month = Integer.parseInt(parts[0]);
+        int year = Integer.parseInt(parts[1]);
+
+        // Obtener año y mes actual
+        Calendar calendar = Calendar.getInstance();
+        int currentYear = calendar.get(Calendar.YEAR) % 100;
+        int currentMonth = calendar.get(Calendar.MONTH) + 1;
+
+        // Validar que no esté vencida
+        if (year < currentYear || (year == currentYear && month < currentMonth)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    // Método para validar CVV
+    private boolean isValidCvv(String cvv) {
+        return cvv.matches("^[0-9]{3,4}$");
+    }
+
+    // Método para validar nombre del titular
+    private boolean isValidCardHolderName(String name) {
+    return name.matches("^[a-zA-Z\\s]{3,}$");
+    }
+
 }
