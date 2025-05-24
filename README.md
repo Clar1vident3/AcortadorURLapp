@@ -1,6 +1,6 @@
 # Acortador de URLs - App Android
 
-![Acortador de URLs Logo](docs/logo_app.png) Una aplicación Android nativa para acortar URLs y gestionar tus enlaces, con funcionalidades para usuarios estándar y usuarios Premium.
+Una aplicación Android nativa para acortar URLs y gestionar tus enlaces, con funcionalidades para usuarios estándar y usuarios Premium.
 
 ## 🚀 Características
 
@@ -69,5 +69,4 @@ Este proyecto asume que tienes una API de acortamiento de URLs externa. Asegúra
 ## Para más información consultar la documentacion
 
 ## Proyecto hecho por los estudiantes de informática de sexto semestre:
-David Jerónimo Rojas Avalos
-Escamilla Cuevas José Octavio
+David Jerónimo Rojas Avalos y José Octavio Escamilla Cuevas
