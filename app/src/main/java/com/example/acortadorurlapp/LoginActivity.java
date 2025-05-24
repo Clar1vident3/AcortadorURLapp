@@ -50,12 +50,12 @@ public class LoginActivity extends AppCompatActivity {
 
         // Listener para el botón de login con Google
         findViewById(R.id.btnGoogleLogin).setOnClickListener(v -> {
-            // Llama al nuevo método para iniciar sesión, que primero cierra la sesión
+            // Llama al nuevo metodo para iniciar sesión, que primero cierra la sesión
             signInAndForceAccountSelection();
         });
     }
 
-    // --- Nuevo método para forzar la selección de cuenta ---
+    // --- Nuevo metodo para forzar la selección de cuenta ---
     private void signInAndForceAccountSelection() {
         // Cierra cualquier sesión de Google que pueda existir previamente.
         // Esto fuerza a la UI de Google a mostrar el selector de cuentas
@@ -152,6 +152,6 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void updateUI(FirebaseUser user) {
-        // No hay cambios aquí, ya que el comportamiento de UI se maneja con redirecciones/Toasts
+        // No hay cambios aquí, ya que el comportamiento de UI se maneja con redirecciones
     }
 }

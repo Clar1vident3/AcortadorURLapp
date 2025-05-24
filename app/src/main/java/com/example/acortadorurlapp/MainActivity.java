@@ -13,10 +13,11 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.Nullable; // Aunque no se usa en este fragmento, se mantiene por si acaso
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat; // Añadir esta importación para los colores
 
-import com.example.acortadorurlapp.models.User; // Asegúrate de que esta importación exista
+import com.example.acortadorurlapp.models.User;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
@@ -24,18 +25,12 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration; // ¡IMPORTANTE!
 
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-// Importaciones corregidas y ajustadas (asumiendo que ShortenRequest, ShortenResponse y RetrofitClient
-// están en el paquete principal de la app o en un subpaquete 'network' o 'api').
-// Si están en 'network', sería:
-// import com.example.acortadorurlapp.network.ShortenRequest;
-// import com.example.acortadorurlapp.network.ShortenResponse;
-// import com.example.acortadorurlapp.network.RetrofitClient;
-// Si están en el paquete principal:
 import com.example.acortadorurlapp.ShortenRequest;
 import com.example.acortadorurlapp.ShortenResponse;
 import com.example.acortadorurlapp.RetrofitClient;
@@ -48,19 +43,21 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
 
-    // --- Declaraciones de variables - ¡SOLO UNA VEZ! ---
+    // --- Declaraciones de variables
     private EditText etUrl;
     private TextView tvResult;
     private Button btnShorten, btnCopy;
     private TextView tvAttemptsCounter;
     private Button btnGoPremium;
     private Button btnSignOut;
+    private Button btnViewHistory; // Declaración añadida si no estaba explícitamente
 
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
     private GoogleSignInClient mGoogleSignInClient;
 
     private User currentUserModel; // Para almacenar el modelo de usuario de Firestore
+    private ListenerRegistration userStatusListener; // ¡NUEVO: Para el listener en tiempo real!
     // --- Fin de las declaraciones ---
 
     @Override
@@ -79,7 +76,7 @@ public class MainActivity extends AppCompatActivity {
                 .build();
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
 
-        // Inicialización de Vistas de la UI - ¡Aquí SÍ van los findViewById!
+        // Inicialización de Vistas de la UI
         etUrl = findViewById(R.id.et_url);
         tvResult = findViewById(R.id.tv_result);
         btnShorten = findViewById(R.id.btn_shorten);
@@ -87,6 +84,8 @@ public class MainActivity extends AppCompatActivity {
         tvAttemptsCounter = findViewById(R.id.tvAttemptsCounter); // ID de tu XML
         btnGoPremium = findViewById(R.id.btnGoPremium); // ID de tu XML
         btnSignOut = findViewById(R.id.btnSignOut); // ID de tu XML
+        btnViewHistory = findViewById(R.id.btnViewHistory); // Asegúrate de que este también está inicializado
+
 
         // Listeners
         btnShorten.setOnClickListener(v -> shortenUrl());
@@ -97,7 +96,6 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        Button btnViewHistory = findViewById(R.id.btnViewHistory);
         btnViewHistory.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, UrlListActivity.class);
             startActivity(intent);
@@ -113,47 +111,83 @@ public class MainActivity extends AppCompatActivity {
         if (currentUser == null) {
             navigateToLogin();
         } else {
-            loadUserData(currentUser.getUid());
+            // ¡CAMBIO CLAVE AQUÍ! Usar setupFirestoreListener en lugar de loadUserData
+            setupFirestoreListener(currentUser.getUid());
         }
     }
 
-    private void loadUserData(String uid) {
+    @Override
+    protected void onStop() {
+        super.onStop();
+        // ¡IMPORTANTE! Eliminar el listener cuando la actividad no está visible
+        if (userStatusListener != null) {
+            userStatusListener.remove();
+            userStatusListener = null;
+            Log.d(TAG, "Firestore user status listener removed.");
+        }
+    }
+
+    // ¡NUEVO MÉTODO! Este reemplaza a loadUserData
+    private void setupFirestoreListener(String uid) {
         DocumentReference userRef = db.collection("users").document(uid);
-        userRef.get().addOnSuccessListener(documentSnapshot -> {
-            if (documentSnapshot.exists()) {
-                currentUserModel = documentSnapshot.toObject(User.class);
+
+        // Si ya hay un listener activo (ej. por onStart después de onStop), lo removemos
+        // para evitar que se creen múltiples listeners duplicados
+        if (userStatusListener != null) {
+            userStatusListener.remove();
+        }
+
+        userStatusListener = userRef.addSnapshotListener((snapshot, e) -> {
+            if (e != null) {
+                Log.w(TAG, "Listen failed.", e);
+                Toast.makeText(MainActivity.this, "Error de conexión con la base de datos.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (snapshot != null && snapshot.exists()) {
+                currentUserModel = snapshot.toObject(User.class);
                 if (currentUserModel != null) {
-                    updateUserUI(); // Llamar a la función de actualización de UI
+                    Log.d(TAG, "User data updated from Firestore. Premium: " + currentUserModel.isPremium() + ", Attempts: " + currentUserModel.getFreeAttemptsRemaining());
+                    updateUserUI(); // <--- Se llama cada vez que el documento cambia
                 } else {
-                    Log.e(TAG, "Error: User object is null after converting document. UID: " + uid);
-                    Toast.makeText(this, "Error al cargar datos del usuario. Por favor, reinicia la app.", Toast.LENGTH_LONG).show();
-                    navigateToLogin(); // Por seguridad, redirigir al login
+                    Log.e(TAG, "Error: User object is null after converting document from snapshot. Document: " + snapshot.getData());
+                    Toast.makeText(MainActivity.this, "Error crítico al cargar datos del usuario.", Toast.LENGTH_LONG).show();
+                    navigateToLogin(); // Por seguridad, redirigir
                 }
             } else {
-                Log.w(TAG, "Documento de usuario no encontrado en Firestore para UID: " + uid + ". Redirigiendo a Login.");
-                navigateToLogin(); // Si no existe el documento, algo salió mal o es un usuario viejo.
+                Log.d(TAG, "Current user document is null or does not exist. Redirigiendo a Login.");
+                navigateToLogin();
             }
-        }).addOnFailureListener(e -> {
-            Log.e(TAG, "Error al cargar datos del usuario desde Firestore: ", e);
-            Toast.makeText(this, "Error al cargar datos del usuario: " + e.getMessage(), Toast.LENGTH_LONG).show();
-            navigateToLogin();
         });
+        Log.d(TAG, "Firestore user status listener set up.");
     }
+
+    // ELIMINAR ESTE MÉTODO: Ya no es necesario con el SnapshotListener
+    // private void loadUserData(String uid) {
+    //     // ... (código anterior)
+    // }
 
     private void updateUserUI() {
         if (currentUserModel == null) {
             Log.w(TAG, "updateUserUI llamado con currentUserModel nulo.");
+            // Ocultar/deshabilitar elementos de la UI si no hay datos de usuario
+            tvAttemptsCounter.setText("Cargando...");
+            btnGoPremium.setVisibility(View.GONE);
+            btnShorten.setEnabled(false);
+            etUrl.setEnabled(false);
             return;
         }
 
         if (currentUserModel.isPremium()) {
             tvAttemptsCounter.setText("¡Usuario Premium!");
-            btnGoPremium.setVisibility(View.GONE);
+            tvAttemptsCounter.setTextColor(ContextCompat.getColor(this, R.color.black)); // Asume que tienes este color
+            btnGoPremium.setVisibility(View.GONE); // Oculta el botón "Hazte Premium"
             btnShorten.setEnabled(true);
             etUrl.setEnabled(true);
         } else {
             tvAttemptsCounter.setText("Intentos Gratis: " + currentUserModel.getFreeAttemptsRemaining());
-            btnGoPremium.setVisibility(View.VISIBLE);
+            tvAttemptsCounter.setTextColor(ContextCompat.getColor(this, android.R.color.black)); // O tu color predeterminado
+            btnGoPremium.setVisibility(View.VISIBLE); // Muestra el botón "Hazte Premium"
 
             boolean hasAttempts = currentUserModel.getFreeAttemptsRemaining() > 0;
             btnShorten.setEnabled(hasAttempts);
@@ -168,18 +202,17 @@ public class MainActivity extends AppCompatActivity {
     private void shortenUrl() {
         String originalUrl = etUrl.getText().toString().trim();
 
-        // Validación para campos vacios
         if (originalUrl.isEmpty()) {
             Toast.makeText(this, "Por favor, ingresa una URL.", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Validación de formato de URL
         if (!isValidUrl(originalUrl)) {
             Toast.makeText(this, "URL no válida. Debe comenzar con http:// o https://", Toast.LENGTH_LONG).show();
             return;
         }
 
+        // Se verifica el modelo actual, que ahora se actualiza en tiempo real
         if (currentUserModel == null || (!currentUserModel.isPremium() && currentUserModel.getFreeAttemptsRemaining() <= 0)) {
             Toast.makeText(this, "No tienes intentos restantes o tu estado no es válido. Hazte Premium.", Toast.LENGTH_LONG).show();
             return;
@@ -195,12 +228,12 @@ public class MainActivity extends AppCompatActivity {
                     tvResult.setVisibility(View.VISIBLE);
                     btnCopy.setVisibility(View.VISIBLE);
 
-                    if (!currentUserModel.isPremium()) {
+                    // La lógica de decrementAttempts ya usa currentUserModel que es actualizado por el listener
+                    if (!currentUserModel.isPremium()) { // Solo decrementar si no es premium
                         decrementAttempts();
                     }
                 } else {
                     String errorMsg = "Error al acortar URL. Código: " + response.code();
-                    // Intentar leer el cuerpo del error si existe
                     if (response.errorBody() != null) {
                         try {
                             errorMsg += ". Mensaje: " + response.errorBody().string();
@@ -222,15 +255,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void decrementAttempts() {
-        if (currentUserModel != null && !currentUserModel.isPremium()) {
+        // Esta función ahora se basa en que currentUserModel ya está actualizado por el listener
+        // y solo se llama si currentUserModel.isPremium() es false en el shortenUrl()
+        if (currentUserModel != null) { // Ya verificamos !isPremium() antes de llamar a esto
             int newAttempts = currentUserModel.getFreeAttemptsRemaining() - 1;
-            currentUserModel.setFreeAttemptsRemaining(newAttempts);
+            // No actualizamos currentUserModel directamente aquí porque el listener lo hará por nosotros
+            // currentUserModel.setFreeAttemptsRemaining(newAttempts); // ¡QUITAR ESTA LÍNEA!
 
             DocumentReference userRef = db.collection("users").document(mAuth.getCurrentUser().getUid());
             userRef.update("freeAttemptsRemaining", newAttempts)
                     .addOnSuccessListener(aVoid -> {
                         Log.d(TAG, "Intentos restantes actualizados en Firestore.");
-                        updateUserUI();
+                        // No es necesario llamar updateUserUI() aquí, el SnapshotListener lo hará automáticamente
                     })
                     .addOnFailureListener(e -> {
                         Log.e(TAG, "Error al actualizar intentos en Firestore.", e);
@@ -265,15 +301,10 @@ public class MainActivity extends AppCompatActivity {
     }
     // Metodo para validar URLs
     private boolean isValidUrl(String url) {
-        // Patrón mejorado que acepta:
-        // - Protocolo http:// o https:// (opcional)
-        // - Dominios con caracteres alfanuméricos, puntos y guiones
-        // - TLD de 2 a 6 letras (o más para nuevos TLDs)
-        // - Rutas con caracteres especiales, Unicode, parámetros, fragmentos (#)
-        String urlPattern = "^(https?://)?" +                         // Protocolo (opcional)
-                "([\\w-]+\\.)+" +                          // Subdominios
-                "([a-z\\u00a1-\\uffff]{2,63})" +           // TLD (acepta caracteres Unicode)
-                "(/[-\\w\\u00a1-\\uffff@:%_+.~#?&/=]*)?$"; // Ruta, parámetros, fragmentos
+        String urlPattern = "^(https?://)?" +
+                "([\\w-]+\\.)+" +
+                "([a-z\\u00a1-\\uffff]{2,63})" +
+                "(/[-\\w\\u00a1-\\uffff@:%_+.~#?&/=]*)?$";
 
         Pattern pattern = Pattern.compile(urlPattern, Pattern.CASE_INSENSITIVE);
         Matcher matcher = pattern.matcher(url);

@@ -27,7 +27,7 @@ public class ShortenResponse {
     public int getClicks() { return clicks; }
 
 
-    // Método para formatear la fecha
+    // Metodo para formatear la fecha
     public String getFormattedDate() {
         try {
             SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault());
@@ -35,7 +35,7 @@ public class ShortenResponse {
             Date date = inputFormat.parse(createdAt);
             return outputFormat.format(date);
         } catch (ParseException e) {
-            return createdAt; // Si falla, devolver el original
+            return createdAt; // Aquí si el formato falla, devolver el original
         }
     }
 }

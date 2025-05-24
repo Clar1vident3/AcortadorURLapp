@@ -1,4 +1,3 @@
-// Archivo: app/src/main/java/com/example/acortadorurlapp/PremiumActivity.java
 package com.example.acortadorurlapp;
 
 import androidx.annotation.NonNull;
@@ -94,13 +93,13 @@ public class PremiumActivity extends AppCompatActivity {
     }
 
     /**
-     * Actualiza el campo 'isPremium' del usuario actual en Firestore a true.
+     * Actualiza el campo 'premium' del usuario actual en Firestore a true.
      */
     private void updateUserToPremium() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser != null) {
             db.collection("users").document(currentUser.getUid())
-                    .update("isPremium", true) // Actualiza el campo 'isPremium'
+                    .update("premium", true) // Actualiza el campo 'isPremium'
                     .addOnSuccessListener(new OnSuccessListener<Void>() {
                         @Override
                         public void onSuccess(Void aVoid) {
@@ -123,7 +122,7 @@ public class PremiumActivity extends AppCompatActivity {
         }
     }
 
-    // Método para validar el número de tarjeta usando el algoritmo de Luhn
+    // Metodo para validar el número de tarjeta usando el algoritmo de Luhn
     private boolean isValidCardNumber(String cardNumber) {
         String cleanedNumber = cardNumber.replaceAll("[^0-9]", "");
 
@@ -149,7 +148,7 @@ public class PremiumActivity extends AppCompatActivity {
         return (sum % 10 == 0);
     }
 
-    // Método para validar fecha de expiración (MM/AA)
+    // Metodo para validar fecha de expiración (MM/AA)
     private boolean isValidExpiryDate(String expiryDate) {
         if (!expiryDate.matches("^(0[1-9]|1[0-2])/?([0-9]{2})$")) {
             return false;
@@ -172,12 +171,12 @@ public class PremiumActivity extends AppCompatActivity {
         return true;
     }
 
-    // Método para validar CVV
+    // Metodo para validar CVV
     private boolean isValidCvv(String cvv) {
         return cvv.matches("^[0-9]{3,4}$");
     }
 
-    // Método para validar nombre del titular
+    // Metodo para validar nombre del titular
     private boolean isValidCardHolderName(String name) {
     return name.matches("^[a-zA-Z\\s]{3,}$");
     }
